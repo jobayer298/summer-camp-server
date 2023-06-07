@@ -25,7 +25,7 @@ async function run() {
   try {
     const userCollection = client.db("summerCamp").collection("users")
 
-
+    //save users to db
     app.put("/users/:email" , async(req, res) =>{
       const email = req.params.email
       const user = req.body
@@ -51,7 +51,7 @@ run().catch(console.dir);
 
 
 app.get("/", (req, res) => {
-  res.json("summer school is running");
+  res.send("summer school is running");
 });
 
 app.listen(port, (req, res) => {

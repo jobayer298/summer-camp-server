@@ -71,16 +71,16 @@ async function run() {
 
     //checking admin
 
-    app.get("/users/admin/:email",verifyJWT, async(req, res) =>{
-      const email = req.params.email 
-      if(req.decoded.email !== email){
-        return res.send({admin: false})
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        return res.send({ admin: false });
       }
-      const query = {email: email}
-      const user = await userCollection.findOne(query)
-      const result = { admin: user?.role === 'admin'}
-      res.send(result)
-    })
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
 
     //checking teacher
     app.get("/users/teacher/:email", verifyJWT, async (req, res) => {
@@ -100,13 +100,16 @@ async function run() {
       res.send(result);
     });
 
-    //save classes to db 
-    app.post('/classes', async(req, res) =>{
-      const classes = req.body 
-      const result = await classCollection.insertOne(classes)
-      res.send(result)
-
-    })
+    //save classes to db
+    app.post("/classes", async (req, res) => {
+      const classes = req.body;
+      const result = await classCollection.insertOne(classes);
+      res.send(result);
+    });
+    app.get("/classes", async (req, res) => {
+      const result = await classCollection.find().toArray();
+      res.send(result);
+    });
     app.put("/users/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
@@ -130,6 +133,18 @@ async function run() {
         },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    //class approved api
+    app.patch("/users/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "approved"
+        }
+      }
+      const result = await classCollection.updateOne(filter, updateDoc)
       res.send(result);
     });
 

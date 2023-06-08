@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,6 +26,10 @@ async function run() {
     const userCollection = client.db("summerCamp").collection("users")
 
     //save users to db
+    app.get("/users", async(req, res) =>{
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
     app.put("/users/:email" , async(req, res) =>{
       const email = req.params.email
       const user = req.body
@@ -38,6 +42,32 @@ async function run() {
       console.log(result);
       res.send(result)
     })
+    //make admin 
+
+    app.patch("/users/admin/:id", async(req, res) =>{
+      const id = req.params.id 
+      const filter = {_id : new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          role: 'admin'
+        },
+      }
+      const result = await userCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
+
+    //make teacher
+    app.patch("/users/teacher/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "teacher",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(

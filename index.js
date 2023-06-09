@@ -44,6 +44,7 @@ async function run() {
   try {
     const userCollection = client.db("summerCamp").collection("users");
     const classCollection = client.db("summerCamp").collection("classes");
+    const selectedClassCollection = client.db("summerCamp").collection("selectedClass");
 
     //verify admin
 
@@ -81,6 +82,11 @@ async function run() {
       const result = { admin: user?.role === "admin" };
       res.send(result);
     });
+    // api for instructors
+    app.get("/instructors", async(req, res) => {
+      const result = await userCollection.find({ role: "teacher" }).toArray()
+      res.send(result)
+    });
 
     //checking teacher
     app.get("/users/teacher/:email", verifyJWT, async (req, res) => {
@@ -95,7 +101,7 @@ async function run() {
     });
 
     //save users to db
-    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin,  async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -110,6 +116,17 @@ async function run() {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
+    //save selected class 
+    app.post("/selectedClasses", async (req, res) => {
+      const classes = req.body;
+      const result = await selectedClassCollection.insertOne(classes);
+      res.send(result);
+    });
+    app.get("/selectedClasses", async (req, res) => {
+      const result = await selectedClassCollection.find().toArray();
+      res.send(result);
+    });
+
     app.put("/users/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;

@@ -125,6 +125,11 @@ async function run() {
       const result = await selectedClassCollection.insertOne(classes);
       res.send(result);
     });
+    //popular class
+    app.get("/popularClasses", async (req, res) => {
+      const result = await classCollection.find().sort({ totalEnrolled: -1 }).toArray();
+      res.send(result);
+    });
     app.get("/selectedClasses", async (req, res) => {
       const email = req.query.email;
       console.log(email);
@@ -266,8 +271,8 @@ async function run() {
       const result = await paymentCollection.find().toArray()
       res.send(result)
     })
-    app.get("/history", verifyJWT, async(req, res) =>{
-      const result = await paymentCollection.find().toArray()
+    app.get("/history", async(req, res) =>{
+      const result = await paymentCollection.find().sort({ date: -1 }).toArray()
       res.send(result)
     })
 

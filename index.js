@@ -46,7 +46,9 @@ async function run() {
   try {
     const userCollection = client.db("summerCamp").collection("users");
     const classCollection = client.db("summerCamp").collection("classes");
-    const selectedClassCollection = client.db("summerCamp").collection("selectedClass");
+    const selectedClassCollection = client
+      .db("summerCamp")
+      .collection("selectedClass");
     const paymentCollection = client.db("summerCamp").collection("payment");
 
     //verify admin
@@ -109,7 +111,7 @@ async function run() {
       res.send(result);
     });
 
-    //save classes to db 
+    //save classes to db
     app.post("/classes", async (req, res) => {
       const classes = req.body;
       const result = await classCollection.insertOne(classes);
@@ -117,6 +119,22 @@ async function run() {
     });
     app.get("/classes", async (req, res) => {
       const result = await classCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/teacherClasses", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      // const decodedEmail = req.decoded.email;
+      // if (email !== decodedEmail) {
+      //   return res
+      //     .status(403)
+      //     .send({ error: true, message: "forbidden access" });
+      // }
+      const query = { instructorEmail: email };
+      const result = await classCollection.find(query).toArray();
       res.send(result);
     });
     //save selected class
@@ -127,7 +145,11 @@ async function run() {
     });
     //popular class
     app.get("/popularClasses", async (req, res) => {
-      const result = await classCollection.find().sort({ totalEnrolled: -1 }).limit(7).toArray();
+      const result = await classCollection
+        .find()
+        .sort({ totalEnrolled: -1 })
+        .limit(6)
+        .toArray();
       res.send(result);
     });
     app.get("/selectedClasses", verifyJWT, async (req, res) => {
@@ -219,6 +241,31 @@ async function run() {
       res.send(result);
     });
 
+    //update class info
+    app.patch("/updateClass/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = req.body;
+      console.log(updateDoc);
+      const classes = {
+        $set: {
+          className: updateDoc.className,
+          seat: updateDoc.seat,
+          totalEnrolled: updateDoc.totalEnrolled,
+        },
+      };
+      const result = await classCollection.updateOne(query, classes);
+      res.send(result);
+    });
+    //singleclass api 
+     app.get("/singleClass/:id", async (req, res) => {
+       const id = req.params.id;
+       const query = { _id: new ObjectId(id) };
+       const result = await classCollection.findOne(query);
+       res.json(result);
+     });
+
+
     //make teacher
     app.patch("/users/teacher/:id", async (req, res) => {
       const id = req.params.id;
@@ -258,23 +305,29 @@ async function run() {
       const courseFilter = {
         _id: new ObjectId(classId),
       };
-      const seat = payment.seat - 1
+      const seat = payment.seat - 1;
       const totalEnrolled = payment.totalEnrolled + 1;
       const updateDoc = {
         $set: { seat, totalEnrolled },
       };
-      const updateResult = await classCollection.updateOne(courseFilter, updateDoc)
+      const updateResult = await classCollection.updateOne(
+        courseFilter,
+        updateDoc
+      );
       const deleteResult = await selectedClassCollection.deleteOne(query);
       res.send({ result, deleteResult, updateResult });
     });
-    app.get("/enrolledClass", async(req, res) =>{
-      const result = await paymentCollection.find().toArray()
-      res.send(result)
-    })
-    app.get("/history", async(req, res) =>{
-      const result = await paymentCollection.find().sort({ date: -1 }).toArray()
-      res.send(result)
-    })
+    app.get("/enrolledClass", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/history", async (req, res) => {
+      const result = await paymentCollection
+        .find()
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(

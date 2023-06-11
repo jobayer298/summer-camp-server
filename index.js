@@ -185,6 +185,34 @@ async function run() {
       const result = await classCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    //class denied api
+    app.patch("/users/class/deny/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "denied",
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    //send feedback
+
+    app.put("/feedback/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = req.body;
+      console.log(updateDoc);
+      const classes = {
+        $set: {
+          feedback: updateDoc.feedback,
+        },
+      };
+      const result = await classCollection.updateOne(query, classes);
+      res.send(result);
+    });
 
     //make teacher
     app.patch("/users/teacher/:id", async (req, res) => {

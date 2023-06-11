@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 var jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -45,6 +47,7 @@ async function run() {
     const userCollection = client.db("summerCamp").collection("users");
     const classCollection = client.db("summerCamp").collection("classes");
     const selectedClassCollection = client.db("summerCamp").collection("selectedClass");
+    const paymentCollection = client.db("summerCamp").collection("payment");
 
     //verify admin
 
@@ -83,9 +86,9 @@ async function run() {
       res.send(result);
     });
     // api for instructors
-    app.get("/instructors", async(req, res) => {
-      const result = await userCollection.find({ role: "teacher" }).toArray()
-      res.send(result)
+    app.get("/instructors", async (req, res) => {
+      const result = await userCollection.find({ role: "teacher" }).toArray();
+      res.send(result);
     });
 
     //checking teacher
@@ -101,7 +104,7 @@ async function run() {
     });
 
     //save users to db
-    app.get("/users", verifyJWT, verifyAdmin,  async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -116,14 +119,32 @@ async function run() {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
-    //save selected class 
+    //save selected class
     app.post("/selectedClasses", async (req, res) => {
       const classes = req.body;
       const result = await selectedClassCollection.insertOne(classes);
       res.send(result);
     });
     app.get("/selectedClasses", async (req, res) => {
-      const result = await selectedClassCollection.find().toArray();
+      const email = req.query.email;
+      console.log(email);
+      if (!email) {
+        res.send([]);
+      }
+      // const decodedEmail = req.decoded.email;
+      // if (email !== decodedEmail) {
+      //   return res
+      //     .status(403)
+      //     .send({ error: true, message: "forbidden access" });
+      // }
+      const query = { email: email };
+      const result = await selectedClassCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.delete("/selectedClasses/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectedClassCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -158,10 +179,10 @@ async function run() {
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
-          status: "approved"
-        }
-      }
-      const result = await classCollection.updateOne(filter, updateDoc)
+          status: "approved",
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
@@ -177,6 +198,50 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    //payment intent
+
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      console.log(price);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", async (req, res) => {
+      const payment = req.body;
+      const cartID = payment.cartID;
+      const classId = payment.classID;
+      const result = await paymentCollection.insertOne(payment);
+      const query = {
+        _id: new ObjectId(cartID),
+      };
+      const courseFilter = {
+        _id: new ObjectId(classId),
+      };
+      const seat = payment.seat - 1
+      const totalEnrolled = payment.totalEnrolled + 1;
+      const updateDoc = {
+        $set: { seat, totalEnrolled },
+      };
+      const updateResult = await classCollection.updateOne(courseFilter, updateDoc)
+      const deleteResult = await selectedClassCollection.deleteOne(query);
+      res.send({ result, deleteResult, updateResult });
+    });
+    app.get("/enrolledClass", async(req, res) =>{
+      const result = await paymentCollection.find().toArray()
+      res.send(result)
+    })
+    app.get("/history", verifyJWT, async(req, res) =>{
+      const result = await paymentCollection.find().toArray()
+      res.send(result)
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(

@@ -109,7 +109,7 @@ async function run() {
       res.send(result);
     });
 
-    //save classes to db
+    //save classes to db 
     app.post("/classes", async (req, res) => {
       const classes = req.body;
       const result = await classCollection.insertOne(classes);
@@ -127,21 +127,21 @@ async function run() {
     });
     //popular class
     app.get("/popularClasses", async (req, res) => {
-      const result = await classCollection.find().sort({ totalEnrolled: -1 }).toArray();
+      const result = await classCollection.find().sort({ totalEnrolled: -1 }).limit(7).toArray();
       res.send(result);
     });
-    app.get("/selectedClasses", async (req, res) => {
+    app.get("/selectedClasses", verifyJWT, async (req, res) => {
       const email = req.query.email;
       console.log(email);
       if (!email) {
         res.send([]);
       }
-      // const decodedEmail = req.decoded.email;
-      // if (email !== decodedEmail) {
-      //   return res
-      //     .status(403)
-      //     .send({ error: true, message: "forbidden access" });
-      // }
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
       const query = { email: email };
       const result = await selectedClassCollection.find(query).toArray();
       res.send(result);

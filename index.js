@@ -89,7 +89,7 @@ async function run() {
     });
     // api for instructors
     app.get("/instructors", async (req, res) => {
-      const result = await userCollection.find({ role: "teacher" }).toArray();
+      const result = await userCollection.find({ role: "teacher" }).limit(6).toArray();
       res.send(result);
     });
 
@@ -328,6 +328,17 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    //stats 
+
+    app.get("/admin-stats", async(req, res) =>{
+       const users = await userCollection.estimatedDocumentCount()
+       const totalClasses = await classCollection.estimatedDocumentCount()
+       const order = await paymentCollection.estimatedDocumentCount()
+       res.send({
+        users, totalClasses, order
+       })
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
